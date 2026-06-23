@@ -1,366 +1,198 @@
 -- ==============================================================================
--- 🚀 LITEXUTOR FLY v1.0 PRO
--- Кастомный мобильный Fly с UI, управлением скоростью и плавным полётом!
+-- 🚀 LITEHUB FLY PACK PRO (MOBILE CAMERA-DIR EDITION)
 -- ==============================================================================
-
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
+local NameID = "LiteHub_FlyPackPRO"
 
--- Настройки полёта
-local FlySpeed = 50
-local IsFlying = false
-local UpValue = 0
-local DownValue = 0
+if CoreGui:FindFirstChild(NameID) then CoreGui[NameID]:Destroy() end
 
-local BG = nil -- BodyGyro (Поворот)
-local BV = nil -- BodyVelocity (Движение)
-local FlyConnection = nil
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = NameID
 
--- Защита от двойного запуска
-if CoreGui:FindFirstChild("LitexutorFlyPRO") then
-    CoreGui.LitexutorFlyPRO:Destroy()
+-- ==============================================================================
+-- 🎛️ МИКРО-МЕНЮ (ДЛЯ УГЛА ЭКРАНА)
+-- ==============================================================================
+local MiniMenu = Instance.new("Frame", ScreenGui)
+MiniMenu.Size = UDim2.new(0, 140, 0, 95)
+MiniMenu.Position = UDim2.new(0, 15, 0, 100) -- Левый верхний угол
+MiniMenu.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MiniMenu.Active = true
+MiniMenu.Draggable = true
+Instance.new("UICorner", MiniMenu).CornerRadius = UDim.new(0, 8)
+
+local Title = Instance.new("TextLabel", MiniMenu)
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.Text = "✈️ Fly Manager"
+Title.TextColor3 = Color3.fromRGB(200, 200, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 12
+Title.BackgroundTransparency = 1
+
+local FlyToggleBtn = Instance.new("TextButton", MiniMenu)
+FlyToggleBtn.Size = UDim2.new(0.9, 0, 0, 28)
+FlyToggleBtn.Position = UDim2.new(0.05, 0, 0, 25)
+FlyToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+FlyToggleBtn.Text = "Fly: ВЫКЛ"
+FlyToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+FlyToggleBtn.Font = Enum.Font.GothamBold
+FlyToggleBtn.TextSize = 12
+Instance.new("UICorner", FlyToggleBtn).CornerRadius = UDim.new(0, 5)
+
+local SpeedBtn = Instance.new("TextButton", MiniMenu)
+SpeedBtn.Size = UDim2.new(0.9, 0, 0, 28)
+SpeedBtn.Position = UDim2.new(0.05, 0, 0, 58)
+SpeedBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+SpeedBtn.Text = "Speed: 50"
+SpeedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedBtn.Font = Enum.Font.GothamBold
+SpeedBtn.TextSize = 12
+Instance.new("UICorner", SpeedBtn).CornerRadius = UDim.new(0, 5)
+
+-- ==============================================================================
+-- 🔼🔽 КНОПКИ UP И DOWN (СПРАВА ВОЗЛЕ ПРЫЖКА)
+-- ==============================================================================
+local function CreateDirButton(text, yPos)
+    local btn = Instance.new("TextButton", ScreenGui)
+    btn.Size = UDim2.new(0, 55, 0, 55)
+    btn.Position = UDim2.new(1, -85, 1, yPos) -- Справа внизу
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    btn.BackgroundTransparency = 0.3
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+    return btn
 end
 
--- ==============================================================================
--- 🎨 СОЗДАНИЕ ИНТЕРФЕЙСА (UI)
--- ==============================================================================
+local UpBtn = CreateDirButton("UP", -230)
+local DownBtn = CreateDirButton("DOWN", -160)
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "LitexutorFlyPRO"
-ScreenGui.ResetOnSpawn = false
-local success = pcall(function() ScreenGui.Parent = CoreGui end)
-if not success then ScreenGui.Parent = Player:WaitForChild("PlayerGui") end
-
--- 1. ЛЕТАЮЩАЯ КНОПКА-КРУЖОК (Toggle Fly Menu)
-local ToggleMenuBtn = Instance.new("TextButton")
-local ToggleMenuCorner = Instance.new("UICorner")
-
-ToggleMenuBtn.Name = "FlyMenuToggle"
-ToggleMenuBtn.Parent = ScreenGui
-ToggleMenuBtn.Size = UDim2.new(0, 60, 0, 60)
-ToggleMenuBtn.Position = UDim2.new(0, 20, 0, 220)
-ToggleMenuBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 200)
-ToggleMenuBtn.Text = "FLY\nMENU"
-ToggleMenuBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleMenuBtn.Font = Enum.Font.GothamBold
-ToggleMenuBtn.TextSize = 12
-ToggleMenuBtn.Active = true
-ToggleMenuBtn.Draggable = true
-
-ToggleMenuCorner.CornerRadius = UDim.new(1, 0)
-ToggleMenuCorner.Parent = ToggleMenuBtn
-
--- 2. ГЛАВНОЕ МЕНЮ (Fly GUI)
-local MainFrame = Instance.new("Frame")
-local MainCorner = Instance.new("UICorner")
-
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.new(0, 300, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -110)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.Visible = false
-MainFrame.Active = true
-MainFrame.Draggable = true
-
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
--- ВЕРХНЯЯ ПАНЕЛЬ (Header)
-local Header = Instance.new("Frame")
-local HeaderCorner = Instance.new("UICorner")
-local Title = Instance.new("TextLabel")
-local CloseBtn = Instance.new("TextButton")
-
-Header.Name = "Header"
-Header.Parent = MainFrame
-Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-
-HeaderCorner.CornerRadius = UDim.new(0, 10)
-HeaderCorner.Parent = Header
-
-local HeaderFix = Instance.new("Frame")
-HeaderFix.Parent = Header
-HeaderFix.Size = UDim2.new(1, 0, 0, 10)
-HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-HeaderFix.BorderSizePixel = 0
-
-Title.Parent = Header
-Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Litexutor Fly PRO"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
-CloseBtn.Parent = Header
-CloseBtn.Size = UDim2.new(0, 40, 0, 40)
-CloseBtn.Position = UDim2.new(1, -40, 0, 0)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 18
-
--- 3. КНОПКА ВКЛ/ВЫКЛ ПОЛЁТА
-local ToggleFlyBtn = Instance.new("TextButton")
-local ToggleFlyCorner = Instance.new("UICorner")
-
-ToggleFlyBtn.Parent = MainFrame
-ToggleFlyBtn.Size = UDim2.new(1, -40, 0, 45)
-ToggleFlyBtn.Position = UDim2.new(0, 20, 0, 60)
-ToggleFlyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- По умолчанию красный (ВЫКЛ)
-ToggleFlyBtn.Text = "FLY: OFF"
-ToggleFlyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleFlyBtn.Font = Enum.Font.GothamBold
-ToggleFlyBtn.TextSize = 18
-
-ToggleFlyCorner.CornerRadius = UDim.new(0, 8)
-ToggleFlyCorner.Parent = ToggleFlyBtn
-
--- 4. ПАНЕЛЬ СКОРОСТИ
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Parent = MainFrame
-SpeedLabel.Size = UDim2.new(1, 0, 0, 20)
-SpeedLabel.Position = UDim2.new(0, 0, 0, 120)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "Скорость полёта"
-SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SpeedLabel.Font = Enum.Font.GothamSemibold
-SpeedLabel.TextSize = 14
-
-local MinusBtn = Instance.new("TextButton")
-local SpeedBox = Instance.new("TextBox")
-local PlusBtn = Instance.new("TextButton")
-
--- Кнопка Минус
-MinusBtn.Parent = MainFrame
-MinusBtn.Size = UDim2.new(0, 40, 0, 40)
-MinusBtn.Position = UDim2.new(0, 40, 0, 150)
-MinusBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-MinusBtn.Text = "-"
-MinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinusBtn.Font = Enum.Font.GothamBold
-MinusBtn.TextSize = 20
-Instance.new("UICorner").Parent = MinusBtn
-
--- Текстовое поле для ввода скорости
-SpeedBox.Parent = MainFrame
-SpeedBox.Size = UDim2.new(0, 100, 0, 40)
-SpeedBox.Position = UDim2.new(0, 100, 0, 150)
-SpeedBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-SpeedBox.Text = tostring(FlySpeed)
-SpeedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SpeedBox.Font = Enum.Font.GothamBold
-SpeedBox.TextSize = 18
-SpeedBox.ClearTextOnFocus = false
-Instance.new("UICorner").Parent = SpeedBox
-
--- Кнопка Плюс
-PlusBtn.Parent = MainFrame
-PlusBtn.Size = UDim2.new(0, 40, 0, 40)
-PlusBtn.Position = UDim2.new(0, 220, 0, 150)
-PlusBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-PlusBtn.Text = "+"
-PlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PlusBtn.Font = Enum.Font.GothamBold
-PlusBtn.TextSize = 20
-Instance.new("UICorner").Parent = PlusBtn
-
--- 5. КНОПКИ ВЫСОТЫ НА ЭКРАНЕ (UP / DOWN)
--- Они висят отдельно от меню, чтобы было удобно нажимать пальцем во время игры
-local UpBtn = Instance.new("TextButton")
-local DownBtn = Instance.new("TextButton")
-
-UpBtn.Parent = ScreenGui
-UpBtn.Size = UDim2.new(0, 60, 0, 60)
-UpBtn.Position = UDim2.new(1, -80, 0.5, -70)
-UpBtn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
-UpBtn.Text = "UP\n▲"
-UpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-UpBtn.Font = Enum.Font.GothamBold
-UpBtn.TextSize = 14
-UpBtn.BackgroundTransparency = 0.3
-Instance.new("UICorner", UpBtn).CornerRadius = UDim.new(1, 0)
 UpBtn.Visible = false
-
-DownBtn.Parent = ScreenGui
-DownBtn.Size = UDim2.new(0, 60, 0, 60)
-DownBtn.Position = UDim2.new(1, -80, 0.5, 10)
-DownBtn.BackgroundColor3 = Color3.fromRGB(200, 100, 60)
-DownBtn.Text = "DOWN\n▼"
-DownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-DownBtn.Font = Enum.Font.GothamBold
-DownBtn.TextSize = 14
-DownBtn.BackgroundTransparency = 0.3
-Instance.new("UICorner", DownBtn).CornerRadius = UDim.new(1, 0)
 DownBtn.Visible = false
 
 -- ==============================================================================
--- ⚙️ ЛОГИКА ИНТЕРФЕЙСА
+-- ⚙️ ЛОГИКА ПОЛЕТА И NOCLIP
 -- ==============================================================================
+local isFlying = false
+local flySpeed = 50
+local upPressed = false
+local downPressed = false
+local bodyGyro, bodyVel
 
--- Открытие / Закрытие главного меню
-ToggleMenuBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+-- Смена скорости
+local speeds = {30, 50, 100, 150}
+local speedIdx = 2
+SpeedBtn.MouseButton1Click:Connect(function()
+    speedIdx = speedIdx + 1
+    if speedIdx > #speeds then speedIdx = 1 end
+    flySpeed = speeds[speedIdx]
+    SpeedBtn.Text = "Speed: " .. flySpeed
 end)
 
--- Крестик (сворачивает в кружок)
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
-
--- Логика изменения скорости
-local function UpdateSpeed(newSpeed)
-    FlySpeed = newSpeed
-    SpeedBox.Text = tostring(FlySpeed)
-end
-
-MinusBtn.MouseButton1Click:Connect(function()
-    UpdateSpeed(math.max(0, FlySpeed - 10))
-end)
-
-PlusBtn.MouseButton1Click:Connect(function()
-    UpdateSpeed(FlySpeed + 10)
-end)
-
--- Ввод скорости вручную (TextBox)
-SpeedBox.FocusLost:Connect(function()
-    local inputNum = tonumber(SpeedBox.Text)
-    if inputNum then
-        UpdateSpeed(inputNum)
-    else
-        UpdateSpeed(FlySpeed) -- Возвращаем старое, если ввели буквы
-    end
-end)
-
--- ==============================================================================
--- 🚁 ЛОГИКА ПОЛЁТА (ENGINE)
--- ==============================================================================
-
-local function StartFly()
-    local Char = Player.Character
-    if not Char or not Char:FindFirstChild("HumanoidRootPart") or not Char:FindFirstChild("Humanoid") then return end
-    
-    local HRP = Char.HumanoidRootPart
-    
-    -- Очищаем старые муверы на всякий случай
-    if BG then BG:Destroy() end
-    if BV then BV:Destroy() end
-    
-    -- Создаем гироскоп для поворота
-    BG = Instance.new("BodyGyro")
-    BG.P = 90000
-    BG.MaxTorque = Vector3.new(900000, 900000, 900000)
-    BG.CFrame = HRP.CFrame
-    BG.Parent = HRP
-    
-    -- Создаем велосити для движения
-    BV = Instance.new("BodyVelocity")
-    BV.Velocity = Vector3.new(0, 0, 0)
-    BV.MaxForce = Vector3.new(900000, 900000, 900000)
-    BV.Parent = HRP
-    
-    -- Запускаем цикл полёта
-    FlyConnection = RunService.RenderStepped:Connect(function()
-        if Char:FindFirstChild("Humanoid") and Char.Humanoid.Health > 0 then
-            -- Поворачиваем персонажа туда, куда смотрит камера
-            BG.CFrame = Camera.CFrame
-            
-            -- Вычисляем направление джойстика
-            local MoveDir = Char.Humanoid.MoveDirection
-            
-            -- Вычисляем вертикальную скорость (кнопки UP/DOWN)
-            local VerticalVelocity = Vector3.new(0, (UpValue + DownValue) * FlySpeed, 0)
-            
-            -- Итоговое движение = (Движение джойстика * Скорость) + Вертикальное движение
-            BV.Velocity = (MoveDir * FlySpeed) + VerticalVelocity
-        else
-            -- Если умер, выключаем Fly
-            ToggleFlyBtn.MouseButton1Click:Fire()
+-- Обработка кнопок UP / DOWN
+local function bindBtn(btn, isUp)
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if isUp then upPressed = true else downPressed = true end
+            btn.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
         end
     end)
-    
-    -- Отключаем падение персонажа
-    Char.Humanoid.PlatformStand = true
+    btn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if isUp then upPressed = false else downPressed = false end
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        end
+    end)
+    btn.MouseLeave:Connect(function()
+        if isUp then upPressed = false else downPressed = false end
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    end)
 end
+bindBtn(UpBtn, true)
+bindBtn(DownBtn, false)
 
-local function StopFly()
-    local Char = Player.Character
-    if FlyConnection then FlyConnection:Disconnect() end
-    if BG then BG:Destroy() end
-    if BV then BV:Destroy() end
-    
-    if Char and Char:FindFirstChild("Humanoid") then
-        Char.Humanoid.PlatformStand = false
-    end
-end
+-- ВКЛ/ВЫКЛ Полета
+FlyToggleBtn.MouseButton1Click:Connect(function()
+    isFlying = not isFlying
+    local char = Player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 
--- Кнопка ВКЛ/ВЫКЛ Fly
-ToggleFlyBtn.MouseButton1Click:Connect(function()
-    IsFlying = not IsFlying
-    if IsFlying then
-        ToggleFlyBtn.Text = "FLY: ON"
-        ToggleFlyBtn.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
+    if isFlying then
+        FlyToggleBtn.Text = "Fly: ВКЛ"
+        FlyToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
         UpBtn.Visible = true
         DownBtn.Visible = true
-        StartFly()
+
+        char.Humanoid.PlatformStand = true
+        
+        bodyGyro = Instance.new("BodyGyro", char.HumanoidRootPart)
+        bodyGyro.P = 9e4
+        bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        bodyGyro.CFrame = char.HumanoidRootPart.CFrame
+
+        bodyVel = Instance.new("BodyVelocity", char.HumanoidRootPart)
+        bodyVel.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bodyVel.Velocity = Vector3.zero
     else
-        ToggleFlyBtn.Text = "FLY: OFF"
-        ToggleFlyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+        FlyToggleBtn.Text = "Fly: ВЫКЛ"
+        FlyToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
         UpBtn.Visible = false
         DownBtn.Visible = false
-        StopFly()
+
+        char.Humanoid.PlatformStand = false
+        if bodyGyro then bodyGyro:Destroy() end
+        if bodyVel then bodyVel:Destroy() end
     end
 end)
 
--- Логика кнопок высоты (Зажал - летишь, отпустил - остановился)
-UpBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        UpValue = 1
-        UpBtn.BackgroundTransparency = 0
-    end
-end)
-UpBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        UpValue = 0
-        UpBtn.BackgroundTransparency = 0.3
+-- Движок полета (куда смотрим + джойстик)
+RunService.RenderStepped:Connect(function()
+    if isFlying and Player.Character and bodyGyro and bodyVel then
+        local cam = workspace.CurrentCamera
+        local humanoid = Player.Character:FindFirstChild("Humanoid")
+        
+        -- Поворачиваем перса туда, куда смотрит камера
+        bodyGyro.CFrame = cam.CFrame
+        
+        local moveDir = Vector3.zero
+        if humanoid and humanoid.MoveDirection.Magnitude > 0 then
+            -- Высчитываем направление мобильного джойстика относительно камеры
+            local camXZ = (cam.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
+            local dotFwd = camXZ:Dot(humanoid.MoveDirection)
+            local dotRight = cam.CFrame.RightVector:Dot(humanoid.MoveDirection)
+            
+            -- Теперь летим реально туда, куда направлена камера (включая небо и землю)
+            moveDir = (cam.CFrame.LookVector * dotFwd) + (cam.CFrame.RightVector * dotRight)
+        end
+
+        -- Добавляем кнопки UP и DOWN
+        if upPressed then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if downPressed then moveDir = moveDir + Vector3.new(0, -1, 0) end
+
+        -- Применяем скорость
+        if moveDir.Magnitude > 0 then
+            bodyVel.Velocity = moveDir.Unit * flySpeed
+        else
+            bodyVel.Velocity = Vector3.zero
+        end
     end
 end)
 
-DownBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        DownValue = -1
-        DownBtn.BackgroundTransparency = 0
-    end
-end)
-DownBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        DownValue = 0
-        DownBtn.BackgroundTransparency = 0.3
-    end
-end)
-
--- Защита при ресете/смерти: сброс состояния
-Player.CharacterAdded:Connect(function()
-    if IsFlying then
-        IsFlying = false
-        ToggleFlyBtn.Text = "FLY: OFF"
-        ToggleFlyBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-        UpBtn.Visible = false
-        DownBtn.Visible = false
-        if FlyConnection then FlyConnection:Disconnect() end
+-- Движок Noclip (работает только в полете)
+RunService.Stepped:Connect(function()
+    if isFlying and Player.Character then
+        for _, v in pairs(Player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
     end
 end)
 
-print("LITEXUTOR FLY PRO ЗАГРУЖЕН!")
-
+print("LiteHub Fly Pack PRO Загружен!")
