@@ -1,115 +1,159 @@
--- LiteHub for Delta (compact mobile UI)
--- Скрипт создаёт мини-меню с быстрой загрузкой скриптов по прямым ссылкам
--- Защита от дубликатов, перетаскиваемое окно, кнопка-триггер.
-
+-- ==============================================================================
+-- 🌟 LITEHUB V3 (MINIMAL EDITION)
+-- ==============================================================================
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
 
--- Таблица для отслеживания уже загруженных скриптов
-local loadedURLs = {}
-
--- Убедимся, что скрипт не задвоится сам
-if CoreGui:FindFirstChild("LiteHub_Main") then
-    return print("LiteHub уже запущен!")
+-- Удаляем старую версию хаба, если она уже открыта
+if CoreGui:FindFirstChild("LiteHub_V3") then 
+    CoreGui.LiteHub_V3:Destroy() 
 end
 
--- Основной ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "LiteHub_Main"
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "LiteHub_V3"
 
--- Главный фрейм (компактное меню)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 200, 0, 250)
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
+-- Ссылки на твои скрипты
+local Scripts = {
+    ["Телепорт PRO"] = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/main.lua",
+    ["Fly Pack"] = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/fly.lua"
+}
+
+-- ==============================================================================
+-- 🎨 ИНТЕРФЕЙС
+-- ==============================================================================
+
+-- Летающий кружок (когда хаб свернут)
+local OpenBtn = Instance.new("TextButton", ScreenGui)
+OpenBtn.Size = UDim2.new(0, 45, 0, 45)
+OpenBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(130, 50, 255)
+OpenBtn.Text = "Hub"
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.TextSize = 14
+OpenBtn.Visible = false
+OpenBtn.Active = true
+OpenBtn.Draggable = true
+Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1, 0)
+
+-- Главное меню
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 220, 0, 240)
+MainFrame.Position = UDim2.new(0.5, -110, 0.5, -120)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.Active = true
 MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
--- Скругление углов главного фрейма
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 8)
-corner.Parent = MainFrame
+-- Верхняя панель (Хедер)
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1, 0, 0, 35)
+Header.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
+local HeaderFix = Instance.new("Frame", Header)
+HeaderFix.Size = UDim2.new(1, 0, 0, 10)
+HeaderFix.Position = UDim2.new(0, 0, 1, -10)
+HeaderFix.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
+HeaderFix.BorderSizePixel = 0
 
--- Тень для красоты (опционально)
-local shadow = Instance.new("ImageLabel")
-shadow.Image = "rbxassetid://6015897843"
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Position = UDim2.new(0, -10, 0, -10)
-shadow.BackgroundTransparency = 1
-shadow.ScaleType = Enum.ScaleType.Slice
-shadow.SliceCenter = Rect.new(10,10,10,10)
-shadow.Parent = MainFrame
-
-MainFrame.Parent = ScreenGui
-
--- Заголовок
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Text = "LiteHub"
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(0.7, 0, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Text = "LITEHUB V3"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextColor3 = Color3.new(1,1,1)
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
-Title.Size = UDim2.new(1, -30, 0, 30)
-Title.Position = UDim2.new(0, 10, 0, 5)
-Title.Parent = MainFrame
 
--- Кнопка "Скрыть" (крестик)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Name = "CloseBtn"
-CloseBtn.Text = "✕"
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 16
-CloseBtn.TextColor3 = Color3.new(1,0.3,0.3)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseBtn.Position = UDim2.new(1, -28, 0, 8)
-CloseBtn.Parent = MainFrame
+-- Кнопка свернуть "_"
+local MinimizeBtn = Instance.new("TextButton", Header)
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 25)
+MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+MinimizeBtn.Text = "_"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+MinimizeBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
 
--- Маленькая круглая кнопка-триггер (показывается всегда)
-local ToggleBtn = Instance.new("Frame")
-ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 40, 0, 40)
-ToggleBtn.AnchorPoint = Vector2.new(1, 0)
-ToggleBtn.Position = UDim2.new(1, -10, 0, 10)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ToggleBtn.BorderSizePixel = 0
-ToggleBtn.Active = true
-ToggleBtn.Draggable = true
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(1, 0)
-toggleCorner.Parent = ToggleBtn
-local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Text = "LH"
-toggleLabel.Font = Enum.Font.GothamBold
-toggleLabel.TextSize = 14
-toggleLabel.TextColor3 = Color3.new(1,1,1)
-toggleLabel.BackgroundTransparency = 1
-toggleLabel.Size = UDim2.new(1,0,1,0)
-toggleLabel.Parent = ToggleBtn
-ToggleBtn.Parent = ScreenGui
+-- Вкладки (Скрипты и Настройки)
+local TabContainer = Instance.new("Frame", MainFrame)
+TabContainer.Size = UDim2.new(1, 0, 1, -40)
+TabContainer.Position = UDim2.new(0, 0, 0, 40)
+TabContainer.BackgroundTransparency = 1
 
--- Контейнер для кнопок внутри MainFrame
-local BtnFrame = Instance.new("Frame")
-BtnFrame.Name = "BtnFrame"
-BtnFrame.Size = UDim2.new(1, -20, 1, -60)
-BtnFrame.Position = UDim2.new(0, 10, 0, 45)
-BtnFrame.BackgroundTransparency = 1
-BtnFrame.Parent = MainFrame
+local ScriptsTab = Instance.new("Frame", TabContainer)
+ScriptsTab.Size = UDim2.new(1, 0, 1, 0)
+ScriptsTab.BackgroundTransparency = 1
 
--- Список кнопок
-local buttons = {
-    { Name = "Teleport",    URL = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/main.lua" },
-    { Name = "Fly",         URL = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/fly.lua" },
-    { Name = "Combat",      URL = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/combat.lua" },
-    { Name = "Brookhaven",  URL = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/bh.lua" }
-}
+local SettingsTab = Instance.new("Frame", TabContainer)
+SettingsTab.Size = UDim2.new(1, 0, 1, 0)
+SettingsTab.BackgroundTransparency = 1
+SettingsTab.Visible = false
+
+local ScriptsLayout = Instance.new("UIListLayout", ScriptsTab)
+ScriptsLayout.Padding = UDim.new(0, 8)
+ScriptsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("Frame", ScriptsTab).Size = UDim2.new(1,0,0,2) -- Отступ сверху
+
+local SettingsLayout = Instance.new("UIListLayout", SettingsTab)
+SettingsLayout.Padding = UDim.new(0, 8)
+SettingsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Instance.new("Frame", SettingsTab).Size = UDim2.new(1,0,0,2) -- Отступ сверху
+
+-- ==============================================================================
+-- ⚙️ ФУНКЦИИ И КНОПКИ
+-- ==============================================================================
+
+local function CreateButton(parent, text, color, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Text = text
+    btn.BackgroundColor3 = color
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- Создаем кнопки для скриптов
+for name, url in pairs(Scripts) do
+    CreateButton(ScriptsTab, "🚀 Запустить: " .. name, Color3.fromRGB(45, 45, 55), function()
+        pcall(function()
+            loadstring(game:HttpGet(url))()
+        end)
+    end)
+end
+
+-- Кнопка перехода в настройки
+CreateButton(ScriptsTab, "⚙️ Настройки", Color3.fromRGB(70, 50, 120), function()
+    ScriptsTab.Visible = false
+    SettingsTab.Visible = true
+end)
+
+-- Кнопки в настройках
+CreateButton(SettingsTab, "◀️ Назад", Color3.fromRGB(45, 45, 55), function()
+    SettingsTab.Visible = false
+    ScriptsTab.Visible = true
+end)
+
+CreateButton(SettingsTab, "❌ Закрыть Хаб", Color3.fromRGB(180, 50, 50), function()
+    ScreenGui:Destroy()
+end)
+
+-- Логика сворачивания
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    OpenBtn.Visible = true
+end)
+
+OpenBtn.MouseButton1Click:Connect(function()
+    OpenBtn.Visible = false
+    MainFrame.Visible = true
+end)
+
+print("LiteHub V3 Загружен! Успешной игры!")
 
 -- Функция создания кнопки
 local function createButton(name, url, yPos)
