@@ -1,13 +1,11 @@
 -- ==============================================================================
--- 🚀 TELEPORT MANAGER v2.0 ULTRA PRO (LiteHub Edition)
--- Разработано специально для Delta. Полный кастомный функционал!
+-- 🚀 TELEPORT MANAGER v2.1 ULTRA PRO (LiteHub Edition - FIXED)
 -- ==============================================================================
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
@@ -15,7 +13,7 @@ local Mouse = Player:GetMouse()
 -- Состояние скрипта
 local SavedLocations = {}
 local TapToTeleportEnabled = false
-local CurrentTheme = "Dark" -- "Dark" или "Light"
+local CurrentTheme = "Dark"
 local ActiveDropdownPoint = nil
 
 -- GPS переменные
@@ -27,14 +25,14 @@ if CoreGui:FindFirstChild("TeleportManagerPRO") then
     CoreGui.TeleportManagerPRO:Destroy()
 end
 
--- Списки для обновления темы
+-- Списки статических элементов (динамические теперь обрабатываются отдельно!)
 local ThemeBackgrounds = {}
 local ThemeHeaders = {}
 local ThemeTexts = {}
 local ThemeButtons = {}
 
 -- ==============================================================================
--- 🎨 СИСТЕМА ТЕМ (ТЁМНАЯ / СВЕТЛАЯ)
+-- 🎨 СИСТЕМА ТЕМ
 -- ==============================================================================
 local Themes = {
     Dark = {
@@ -55,12 +53,12 @@ local Themes = {
     }
 }
 
-local function UpdateThemeUI()
+local function UpdateStaticTheme()
     local theme = Themes[CurrentTheme]
-    for _, obj in pairs(ThemeBackgrounds) do if obj.ClassName == "Frame" or obj.ClassName == "ScrollingFrame" then obj.BackgroundColor3 = theme.MainBg end end
+    for _, obj in pairs(ThemeBackgrounds) do obj.BackgroundColor3 = theme.MainBg end
     for _, obj in pairs(ThemeHeaders) do obj.BackgroundColor3 = theme.HeaderBg end
     for _, obj in pairs(ThemeTexts) do obj.TextColor3 = theme.Text end
-    for _, obj in pairs(ThemeButtons) do if obj:Attribute() ~= "CustomColor" then obj.BackgroundColor3 = theme.ItemBg end obj.TextColor3 = theme.Text end
+    for _, obj in pairs(ThemeButtons) do obj.BackgroundColor3 = theme.ItemBg; obj.TextColor3 = theme.Text end
 end
 
 -- ==============================================================================
@@ -114,7 +112,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Teleport Manager v2.0 PRO"
+Title.Text = "Teleport Manager PRO v2.1"
 Title.TextColor3 = Themes.Dark.Text
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 15
@@ -136,9 +134,7 @@ TabBar.Size = UDim2.new(1, 0, 0, 35)
 TabBar.Position = UDim2.new(0, 0, 0, 40)
 TabBar.BackgroundColor3 = Themes.Dark.TabBg
 TabBar.BorderSizePixel = 0
-
-local TabListLayout = Instance.new("UIListLayout", TabBar)
-TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+table.insert(ThemeHeaders, TabBar)
 
 local Tab1Btn = Instance.new("TextButton", TabBar)
 Tab1Btn.Size = UDim2.new(0.5, 0, 1, 0)
@@ -146,15 +142,14 @@ Tab1Btn.BackgroundTransparency = 1
 Tab1Btn.Text = "Управление ТП"
 Tab1Btn.Font = Enum.Font.GothamSemibold
 Tab1Btn.TextSize = 13
-table.insert(ThemeTexts, Tab1Btn)
 
 local Tab2Btn = Instance.new("TextButton", TabBar)
 Tab2Btn.Size = UDim2.new(0.5, 0, 1, 0)
+Tab2Btn.Position = UDim2.new(0.5, 0, 0, 0)
 Tab2Btn.BackgroundTransparency = 1
 Tab2Btn.Text = "Настройки / GPS"
 Tab2Btn.Font = Enum.Font.GothamSemibold
 Tab2Btn.TextSize = 13
-table.insert(ThemeTexts, Tab2Btn)
 
 -- Контейнер контента
 local ContentContainer = Instance.new("Frame", MainFrame)
@@ -175,7 +170,6 @@ SaveTPBtn.Text = "➕ Сохранить текущую точку"
 SaveTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SaveTPBtn.Font = Enum.Font.GothamBold
 SaveTPBtn.TextSize = 13
-SaveTPBtn:SetAttribute("CustomColor", true)
 Instance.new("UICorner", SaveTPBtn).CornerRadius = UDim.new(0, 6)
 
 local TPList = Instance.new("ScrollingFrame", Tab1Frame)
@@ -184,8 +178,6 @@ TPList.Position = UDim2.new(0, 10, 0, 55)
 TPList.BackgroundTransparency = 1
 TPList.ScrollBarThickness = 4
 TPList.CanvasSize = UDim2.new(0, 0, 0, 0)
-table.insert(ThemeBackgrounds, TPList)
-
 local TPListLayout = Instance.new("UIListLayout", TPList)
 TPListLayout.Padding = UDim.new(0, 6)
 
@@ -198,8 +190,7 @@ Tab2Frame.Visible = false
 local Tab2Layout = Instance.new("UIListLayout", Tab2Frame)
 Tab2Layout.Padding = UDim.new(0, 10)
 Tab2Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-Instance.new("Frame", Tab2Frame).Size = UDim2.new(1,0,0,5) -- Отступ сверху
+Instance.new("Frame", Tab2Frame).Size = UDim2.new(1,0,0,5)
 
 local TapToTPBtn = Instance.new("TextButton", Tab2Frame)
 TapToTPBtn.Size = UDim2.new(0.95, 0, 0, 40)
@@ -208,7 +199,6 @@ TapToTPBtn.Text = "Tap to Teleport: ВЫКЛ"
 TapToTPBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
 TapToTPBtn.Font = Enum.Font.GothamBold
 TapToTPBtn.TextSize = 13
-TapToTPBtn:SetAttribute("CustomColor", true)
 Instance.new("UICorner", TapToTPBtn).CornerRadius = UDim.new(0, 6)
 
 local ThemeToggleBtn = Instance.new("TextButton", Tab2Frame)
@@ -220,7 +210,7 @@ Instance.new("UICorner", ThemeToggleBtn).CornerRadius = UDim.new(0, 6)
 table.insert(ThemeButtons, ThemeToggleBtn)
 
 -- ==============================================================================
--- 🛸 УМНОЕ ОКНО GPS И ЛОГИКА НАВИГАЦИИ
+-- 🛸 УМНОЕ ОКНО GPS И ДРОПДАУН МЕНЮ (ИСПРАВЛЕНО!)
 -- ==============================================================================
 local GPSInfoWindow = Instance.new("Frame", ScreenGui)
 GPSInfoWindow.Size = UDim2.new(0, 200, 0, 90)
@@ -238,8 +228,8 @@ GPSInfoTitle.Text = "📡 Навигатор PRO"
 GPSInfoTitle.TextColor3 = Color3.fromRGB(255, 130, 0)
 GPSInfoTitle.Font = Enum.Font.GothamBold
 GPSInfoTitle.TextSize = 13
-GPSInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
 GPSInfoTitle.BackgroundTransparency = 1
+GPSInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local GPSClose = Instance.new("TextButton", GPSInfoWindow)
 GPSClose.Size = UDim2.new(0, 20, 0, 20)
@@ -256,8 +246,8 @@ GPSDistLabel.Text = "Дистанция: ---"
 GPSDistLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 GPSDistLabel.Font = Enum.Font.GothamSemibold
 GPSDistLabel.TextSize = 12
-GPSDistLabel.TextXAlignment = Enum.TextXAlignment.Left
 GPSDistLabel.BackgroundTransparency = 1
+GPSDistLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local GPSObstacleLabel = Instance.new("TextLabel", GPSInfoWindow)
 GPSObstacleLabel.Size = UDim2.new(1, -20, 0, 25)
@@ -266,17 +256,31 @@ GPSObstacleLabel.Text = "Путь: Сканирование..."
 GPSObstacleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 GPSObstacleLabel.Font = Enum.Font.GothamSemibold
 GPSObstacleLabel.TextSize = 12
-GPSObstacleLabel.TextXAlignment = Enum.TextXAlignment.Left
 GPSObstacleLabel.BackgroundTransparency = 1
+GPSObstacleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Выпадающее меню операций (Контекстный Дропдаун)
+-- Невидимый слой-защита для закрытия менюшки, чтобы тачскрин не багался
+local DropdownOverlay = Instance.new("TextButton", ScreenGui)
+DropdownOverlay.Size = UDim2.new(1, 0, 1, 0)
+DropdownOverlay.BackgroundTransparency = 1
+DropdownOverlay.Text = ""
+DropdownOverlay.Visible = false
+DropdownOverlay.ZIndex = 9
+
 local DropdownMenu = Instance.new("Frame", ScreenGui)
 DropdownMenu.Size = UDim2.new(0, 140, 0, 130)
 DropdownMenu.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 DropdownMenu.Visible = false
+DropdownMenu.ZIndex = 10
 Instance.new("UICorner", DropdownMenu).CornerRadius = UDim.new(0, 6)
 local DropLayout = Instance.new("UIListLayout", DropdownMenu)
 DropLayout.Padding = UDim.new(0, 2)
+
+local function HideDropdown()
+    DropdownMenu.Visible = false
+    DropdownOverlay.Visible = false
+end
+DropdownOverlay.MouseButton1Click:Connect(HideDropdown)
 
 local function CreateDropBtn(text, color, callback)
     local b = Instance.new("TextButton", DropdownMenu)
@@ -287,18 +291,19 @@ local function CreateDropBtn(text, color, callback)
     b.Font = Enum.Font.GothamSemibold
     b.TextSize = 12
     b.BorderSizePixel = 0
+    b.ZIndex = 11
     b.MouseButton1Click:Connect(function()
-        DropdownMenu.Visible = false
+        HideDropdown()
         callback()
     end)
 end
 
 -- ==============================================================================
--- ⚙️ ОПЕРАЦИОННАЯ ЛОГИКА И ИНТЕГРАЦИЯ С ФУНКЦИЯМИ
+-- ⚙️ ОПЕРАЦИОННАЯ ЛОГИКА
 -- ==============================================================================
 
 local function SafeTeleport(cframe)
-    task.wait(0.1) -- Просил микро-паузу перед GO! Получай, для стабильности инжекта
+    task.wait(0.1)
     local char = Player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         char.HumanoidRootPart.CFrame = cframe
@@ -348,7 +353,6 @@ local function SetupSmartGPS(cframe, name)
             txt.Text = "📍 " .. name .. "\n" .. math.floor(dist) .. " studs"
             GPSDistLabel.Text = "Дистанция: " .. math.floor(dist) .. " studs"
 
-            -- Поиск препятствий лучами (Raycast)
             local dir = p2 - p1
             local rayParams = RaycastParams.new()
             rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -366,7 +370,7 @@ local function SetupSmartGPS(cframe, name)
     end)
 end
 
--- Логика переключения вкладок
+-- Переключение вкладок
 local function switchTab(id)
     if id == 1 then
         Tab1Frame.Visible = true; Tab2Frame.Visible = false
@@ -382,37 +386,29 @@ Tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
 Tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
 switchTab(1)
 
--- Смена тем
-ThemeToggleBtn.MouseButton1Click:Connect(function()
-    CurrentTheme = (CurrentTheme == "Dark") and "Light" or "Dark"
-    ThemeToggleBtn.Text = "Тема хаба: " .. (CurrentTheme == "Dark" and "Тёмная" or "Светлая")
-    UpdateThemeUI()
-    switchTab(Tab1Frame.Visible and 1 or 2)
-end)
-
--- Рендеринг элементов списка сохраненных точек
+-- Функция перерисовки списка точек (Фикс бага с памятью!)
 local function RebuildTPList()
     for _, child in pairs(TPList:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
     end
 
+    local currentThemeConfig = Themes[CurrentTheme]
+
     for idx, item in ipairs(SavedLocations) do
         local ItemFrame = Instance.new("Frame", TPList)
         ItemFrame.Size = UDim2.new(1, -5, 0, 42)
-        ItemFrame.BackgroundColor3 = Themes[CurrentTheme].ItemBg
+        ItemFrame.BackgroundColor3 = currentThemeConfig.ItemBg
         Instance.new("UICorner", ItemFrame).CornerRadius = UDim.new(0, 6)
-        table.insert(ThemeButtons, ItemFrame)
 
         local ItemName = Instance.new("TextLabel", ItemFrame)
         ItemName.Size = UDim2.new(0.55, 0, 1, 0)
         ItemName.Position = UDim2.new(0, 10, 0, 0)
         ItemName.BackgroundTransparency = 1
         ItemName.Text = item.Name
-        ItemName.TextColor3 = Themes[CurrentTheme].Text
+        ItemName.TextColor3 = currentThemeConfig.Text
         ItemName.Font = Enum.Font.GothamBold
         ItemName.TextSize = 13
         ItemName.TextXAlignment = Enum.TextXAlignment.Left
-        table.insert(ThemeTexts, ItemName)
 
         local GoBtn = Instance.new("TextButton", ItemFrame)
         GoBtn.Size = UDim2.new(0, 50, 0, 32)
@@ -422,7 +418,6 @@ local function RebuildTPList()
         GoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         GoBtn.Font = Enum.Font.GothamBold
         GoBtn.TextSize = 12
-        GoBtn:SetAttribute("CustomColor", true)
         Instance.new("UICorner", GoBtn).CornerRadius = UDim.new(0, 5)
 
         local OptBtn = Instance.new("TextButton", ItemFrame)
@@ -433,39 +428,40 @@ local function RebuildTPList()
         OptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         OptBtn.Font = Enum.Font.GothamBold
         OptBtn.TextSize = 14
-        OptBtn:SetAttribute("CustomColor", true)
         Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0, 5)
 
         GoBtn.MouseButton1Click:Connect(function()
             SafeTeleport(item.CFrame)
         end)
 
-        -- Кнопка Дропдауна "v"
         OptBtn.MouseButton1Click:Connect(function()
-            ActiveDropdownPoint = {Idx = idx, Item = item, Frame = ItemFrame, Label = ItemName}
+            ActiveDropdownPoint = {Idx = idx, Item = item, Label = ItemName}
             DropdownMenu.Position = UDim2.new(0, OptBtn.AbsolutePosition.X - 105, 0, OptBtn.AbsolutePosition.Y + 35)
-            DropdownMenu.Visible = not DropdownMenu.Visible
+            DropdownOverlay.Visible = true
+            DropdownMenu.Visible = true
         end)
     end
     TPList.CanvasSize = UDim2.new(0, 0, 0, TPListLayout.AbsoluteContentSize.Y + 10)
 end
 
--- Конфигурация кнопок Дропдаун-меню ("v")
+-- Смена темы (Безопасная перерисовка)
+ThemeToggleBtn.MouseButton1Click:Connect(function()
+    CurrentTheme = (CurrentTheme == "Dark") and "Light" or "Dark"
+    ThemeToggleBtn.Text = "Тема хаба: " .. (CurrentTheme == "Dark" and "Тёмная" or "Светлая")
+    UpdateStaticTheme()
+    RebuildTPList() -- Полностью перерисовываем список, чтобы избежать крашей старых кнопок
+    switchTab(Tab1Frame.Visible and 1 or 2)
+end)
+
+-- Настройки кнопок меню
 CreateDropBtn("📡 Включить GPS", Color3.fromRGB(255, 160, 50), function()
-    if ActiveDropdownPoint then
-        SetupSmartGPS(ActiveDropdownPoint.Item.CFrame, ActiveDropdownPoint.Item.Name)
-    end
+    if ActiveDropdownPoint then SetupSmartGPS(ActiveDropdownPoint.Item.CFrame, ActiveDropdownPoint.Item.Name) end
 end)
-
-CreateDropBtn("❌ Выключить GPS", Color3.fromRGB(255, 100, 100), function()
-    CleanGPS()
-end)
-
+CreateDropBtn("❌ Выключить GPS", Color3.fromRGB(255, 100, 100), function() CleanGPS() end)
 CreateDropBtn("✏️ Переименовать", Color3.fromRGB(100, 200, 255), function()
     if ActiveDropdownPoint then
         local lbl = ActiveDropdownPoint.Label
         lbl.Visible = false
-        
         local editBox = Instance.new("TextBox", lbl.Parent)
         editBox.Size = lbl.Size
         editBox.Position = lbl.Position
@@ -486,7 +482,6 @@ CreateDropBtn("✏️ Переименовать", Color3.fromRGB(100, 200, 255)
         end)
     end
 end)
-
 CreateDropBtn("🗑️ Удалить точку", Color3.fromRGB(255, 70, 70), function()
     if ActiveDropdownPoint then
         table.remove(SavedLocations, ActiveDropdownPoint.Idx)
@@ -495,7 +490,7 @@ CreateDropBtn("🗑️ Удалить точку", Color3.fromRGB(255, 70, 70), 
     end
 end)
 
--- Создание новой локации
+-- Создание новой точки
 SaveTPBtn.MouseButton1Click:Connect(function()
     local char = Player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -506,7 +501,7 @@ SaveTPBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Логика скрытия хаба
+-- Скрытие меню хаба
 ToggleButton.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
 
@@ -520,264 +515,10 @@ end)
 Mouse.Button1Down:Connect(function()
     if TapToTeleportEnabled and Mouse.Target and not UserInputService:GetFocusedTextBox() then
         local targetPos = Mouse.Hit.Position + Vector3.new(0, 3, 0)
-        SafeTeleport(CFrame.new(local TabBar = Instance.new("Frame")
-local TabListLayout = Instance.new("UIListLayout")
-local Tab1Btn = Instance.new("TextButton")
-local Tab2Btn = Instance.new("TextButton")
-
-TabBar.Name = "TabBar"
-TabBar.Parent = MainFrame
-TabBar.Size = UDim2.new(1, 0, 0, 35)
-TabBar.Position = UDim2.new(0, 0, 0, 40)
-TabBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TabBar.BorderSizePixel = 0
-
-TabListLayout.Parent = TabBar
-TabListLayout.FillDirection = Enum.FillDirection.Horizontal
-TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local function createTabButton(name, text)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(0.5, 0, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextSize = 14
-    btn.BorderSizePixel = 0
-    return btn
-end
-
-Tab1Btn = createTabButton("Tab1Btn", "Управление ТП")
-Tab2Btn = createTabButton("Tab2Btn", "Настройки / GPS")
-Tab1Btn.Parent = TabBar
-Tab2Btn.Parent = TabBar
-
--- 5. КОНТЕЙНЕРЫ ДЛЯ КОНТЕНТА
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Name = "Content"
-ContentContainer.Parent = MainFrame
-ContentContainer.Size = UDim2.new(1, 0, 1, -75)
-ContentContainer.Position = UDim2.new(0, 0, 0, 75)
-ContentContainer.BackgroundTransparency = 1
-
--- Вкладка 1: Управление ТП
-local Tab1Frame = Instance.new("Frame")
-Tab1Frame.Parent = ContentContainer
-Tab1Frame.Size = UDim2.new(1, 0, 1, 0)
-Tab1Frame.BackgroundTransparency = 1
-
-local SaveTPBtn = Instance.new("TextButton")
-local SaveTPCorner = Instance.new("UICorner")
-SaveTPBtn.Parent = Tab1Frame
-SaveTPBtn.Size = UDim2.new(1, -20, 0, 35)
-SaveTPBtn.Position = UDim2.new(0, 10, 0, 10)
-SaveTPBtn.BackgroundColor3 = Color3.fromRGB(40, 180, 80)
-SaveTPBtn.Text = "➕ Сохранить текущую точку"
-SaveTPBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-SaveTPBtn.Font = Enum.Font.GothamBold
-SaveTPBtn.TextSize = 14
-SaveTPCorner.CornerRadius = UDim.new(0, 6)
-SaveTPCorner.Parent = SaveTPBtn
-
--- Список точек (ScrollingFrame)
-local TPList = Instance.new("ScrollingFrame")
-local TPListLayout = Instance.new("UIListLayout")
-TPList.Parent = Tab1Frame
-TPList.Size = UDim2.new(1, -20, 1, -60)
-TPList.Position = UDim2.new(0, 10, 0, 55)
-TPList.BackgroundTransparency = 1
-TPList.ScrollBarThickness = 5
-TPList.CanvasSize = UDim2.new(0, 0, 0, 0) -- Будет обновляться динамически
-
-TPListLayout.Parent = TPList
-TPListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TPListLayout.Padding = UDim.new(0, 5)
-
--- Вкладка 2: Настройки
-local Tab2Frame = Instance.new("Frame")
-Tab2Frame.Parent = ContentContainer
-Tab2Frame.Size = UDim2.new(1, 0, 1, 0)
-Tab2Frame.BackgroundTransparency = 1
-Tab2Frame.Visible = false -- Скрыта по умолчанию
-
-local TapToTPBtn = Instance.new("TextButton")
-local TapToTPCorner = Instance.new("UICorner")
-TapToTPBtn.Parent = Tab2Frame
-TapToTPBtn.Size = UDim2.new(1, -20, 0, 40)
-TapToTPBtn.Position = UDim2.new(0, 10, 0, 10)
-TapToTPBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-TapToTPBtn.Text = "Tap to Teleport: ВЫКЛ"
-TapToTPBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-TapToTPBtn.Font = Enum.Font.GothamBold
-TapToTPBtn.TextSize = 14
-TapToTPCorner.CornerRadius = UDim.new(0, 6)
-TapToTPCorner.Parent = TapToTPBtn
-
--- ==============================================================================
--- ⚙️ ЛОГИКА СКРИПТА
--- ==============================================================================
-
--- Функция безопасного телепорта
-local function SafeTeleport(cframe)
-    local char = Player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = cframe
-    end
-end
-
--- Логика вкладок
-local function switchTab(tab)
-    if tab == 1 then
-        Tab1Frame.Visible = true
-        Tab2Frame.Visible = false
-        Tab1Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Tab2Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-    else
-        Tab1Frame.Visible = false
-        Tab2Frame.Visible = true
-        Tab1Btn.TextColor3 = Color3.fromRGB(150, 150, 150)
-        Tab2Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    end
-end
-
-Tab1Btn.MouseButton1Click:Connect(function() switchTab(1) end)
-Tab2Btn.MouseButton1Click:Connect(function() switchTab(2) end)
-switchTab(1) -- Инициализация
-
--- Открытие/Закрытие меню на летучую кнопку
-ToggleButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
-
--- Закрытие на крестик
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-end)
-
--- Создание GPS метки
-local function setGPS(cframe, name)
-    -- Удаляем старый GPS, если есть
-    if GPSPart then GPSPart:Destroy() end
-    if GPSConnection then GPSConnection:Disconnect() end
-
-    -- Создаем невидимый парт для метки
-    GPSPart = Instance.new("Part")
-    GPSPart.Anchored = true
-    GPSPart.CanCollide = false
-    GPSPart.Transparency = 1
-    GPSPart.CFrame = cframe
-    GPSPart.Parent = workspace
-
-    local bgui = Instance.new("BillboardGui")
-    bgui.Parent = GPSPart
-    bgui.AlwaysOnTop = true
-    bgui.Size = UDim2.new(0, 200, 0, 50)
-    bgui.StudsOffset = Vector3.new(0, 3, 0)
-
-    local txt = Instance.new("TextLabel")
-    txt.Parent = bgui
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.TextColor3 = Color3.fromRGB(255, 100, 0) -- Наш фирменный рыжий!
-    txt.TextStrokeTransparency = 0 -- Обводка для читаемости
-    txt.Font = Enum.Font.GothamBold
-    txt.TextSize = 16
-
-    -- Цикл обновления дистанции
-    GPSConnection = RunService.RenderStepped:Connect(function()
-        local char = Player.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            local dist = (char.HumanoidRootPart.Position - GPSPart.Position).Magnitude
-            txt.Text = name .. "\n" .. math.floor(dist) .. " studs"
-        end
-    end)
-end
-
--- Добавление новой точки ТП
-SaveTPBtn.MouseButton1Click:Connect(function()
-    local char = Player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local posCFrame = char.HumanoidRootPart.CFrame
-        local id = #SavedLocations + 1
-        local pointName = "Точка №" .. id
-        
-        table.insert(SavedLocations, {Name = pointName, CFrame = posCFrame})
-        
-        -- Создаем плашку для точки
-        local ItemFrame = Instance.new("Frame")
-        ItemFrame.Size = UDim2.new(1, 0, 0, 40)
-        ItemFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-        local ItemCorner = Instance.new("UICorner")
-        ItemCorner.CornerRadius = UDim.new(0, 6)
-        ItemCorner.Parent = ItemFrame
-        ItemFrame.Parent = TPList
-
-        local ItemName = Instance.new("TextLabel")
-        ItemName.Parent = ItemFrame
-        ItemName.Size = UDim2.new(0.5, 0, 1, 0)
-        ItemName.Position = UDim2.new(0, 10, 0, 0)
-        ItemName.BackgroundTransparency = 1
-        ItemName.Text = pointName
-        ItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ItemName.Font = Enum.Font.GothamBold
-        ItemName.TextSize = 14
-        ItemName.TextXAlignment = Enum.TextXAlignment.Left
-
-        local GoBtn = Instance.new("TextButton")
-        GoBtn.Parent = ItemFrame
-        GoBtn.Size = UDim2.new(0, 60, 0, 30)
-        GoBtn.Position = UDim2.new(1, -140, 0, 5)
-        GoBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
-        GoBtn.Text = "GO"
-        GoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        GoBtn.Font = Enum.Font.GothamBold
-        Instance.new("UICorner").Parent = GoBtn
-
-        local GPSBtn = Instance.new("TextButton")
-        GPSBtn.Parent = ItemFrame
-        GPSBtn.Size = UDim2.new(0, 60, 0, 30)
-        GPSBtn.Position = UDim2.new(1, -70, 0, 5)
-        GPSBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 40)
-        GPSBtn.Text = "GPS"
-        GPSBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        GPSBtn.Font = Enum.Font.GothamBold
-        Instance.new("UICorner").Parent = GPSBtn
-
-        -- Логика кнопок элемента
-        GoBtn.MouseButton1Click:Connect(function()
-            SafeTeleport(posCFrame)
-        end)
-
-        GPSBtn.MouseButton1Click:Connect(function()
-            setGPS(posCFrame, pointName)
-        end)
-
-        -- Обновляем скролл
-        TPList.CanvasSize = UDim2.new(0, 0, 0, TPListLayout.AbsoluteContentSize.Y + 10)
-    end
-end)
-
--- Логика Tap to Teleport
-TapToTPBtn.MouseButton1Click:Connect(function()
-    TapToTeleportEnabled = not TapToTeleportEnabled
-    if TapToTeleportEnabled then
-        TapToTPBtn.Text = "Tap to Teleport: ВКЛ"
-        TapToTPBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-    else
-        TapToTPBtn.Text = "Tap to Teleport: ВЫКЛ"
-        TapToTPBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    end
-end)
-
-Mouse.Button1Down:Connect(function()
-    if TapToTeleportEnabled and Mouse.Target then
-        -- Телепорт на место клика + 3 студа вверх
-        local targetPos = Mouse.Hit.Position + Vector3.new(0, 3, 0)
         SafeTeleport(CFrame.new(targetPos))
     end
 end)
 
-print("Teleport Manager PRO загружен! Удачной игры!")
-
+-- Финальный запуск
+UpdateStaticTheme()
+print("LiteHub Teleport Manager PRO v2.1 (FIXED) Loaded!")
