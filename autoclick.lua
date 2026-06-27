@@ -1,49 +1,25 @@
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-
--- Главный контейнер
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AdvancedAutoclicker"
 ScreenGui.Parent = game:CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- Хранилище данных о кликерах
-local clickers = {} -- { [id] = { triggerFrame = Frame, ms = number, active = bool, thread = thread } }
-local clickerCount = 0
+local clickers = {}
 local editMode = false
 
--- Вспомогательная функция для перетаскивания (Drag)
 local function makeDraggable(guiObject)
 	local dragging, dragInput, dragStart, startPos
 	guiObject.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = guiObject.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragging = false end
-			end)
+			dragging = true dragStart = input.Position startPos = guiObject.Position
+			input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
 		end
 	end)
-	guiObject.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-			dragInput = input
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			local delta = input.Position - dragStart
-			guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		end
-	end)
+	guiObject.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+	UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then local delta = input.Position - dragStart guiObject.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
 end
 
--- ==========================================
--- 1. МАЛЕНЬКАЯ КНОПКА (AC: OFF / AC: ON)
--- ==========================================
 local MainToggle = Instance.new("TextButton")
 MainToggle.Size = UDim2.new(0, 90, 0, 40)
 MainToggle.Position = UDim2.new(0.05, 0, 0.2, 0)
@@ -54,62 +30,180 @@ MainToggle.Font = Enum.Font.SourceSansBold
 MainToggle.TextSize = 18
 MainToggle.Parent = ScreenGui
 makeDraggable(MainToggle)
+local MainCorner = Instance.new("UICorner") MainCorner.CornerRadius = UDim.new(0, 8) MainCorner.Parent = MainToggle
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainToggle
-
--- ==========================================
--- 2. ГЛАВНАЯ КНОПКА НАСТРОЕК (AC)
--- ==========================================
 local MenuButton = Instance.new("TextButton")
 MenuButton.Size = UDim2.new(0, 40, 0, 40)
-MenuButton.Position = UDim2.new(0, 95, 0, 0) -- Справа от тумблера
+MenuButton.Position = UDim2.new(0, 95, 0, 0)
 MenuButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MenuButton.Text = "⚙️"
 MenuButton.TextSize = 20
 MenuButton.Parent = MainToggle
+local MenuCorner = Instance.new("UICorner") MenuCorner.CornerRadius = UDim.new(0, 8) MenuCorner.Parent = MenuButton
 
-local MenuCorner = Instance.new("UICorner")
-MenuCorner.CornerRadius = UDim.new(0, 8)
-MenuCorner.Parent = MenuButton
-
--- ==========================================
--- 3. ОКНО МЕНЮ НАСТРОЕК
--- ==========================================
 local MenuFrame = Instance.new("Frame")
-MenuFrame.Size = UDim2.new(0, 320, 0, 380)
-MenuFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
+MenuFrame.Size = UDim2.new(0, 320, 0, 340)
+MenuFrame.Position = UDim2.new(0.5, -160, 0.5, -170)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MenuFrame.Visible = false
 MenuFrame.Parent = ScreenGui
 makeDraggable(MenuFrame)
+local FrameCorner = Instance.new("UICorner") FrameCorner.CornerRadius = UDim.new(0, 12) FrameCorner.Parent = MenuFrame
 
-local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 12)
-FrameCorner.Parent = MenuFrame
-
--- Размытие заднего фона (Blur)
-local BlurEffect = Instance.new("BlurEffect")
-BlurEffect.Size = 0
-BlurEffect.Parent = game:GetService("Lighting")
-
--- Скролл-список кликеров в меню
 local ScrollList = Instance.new("ScrollingFrame")
-ScrollList.Size = UDim2.new(0, 300, 0, 240)
-ScrollList.Position = UDim2.new(0, 10, 0, 50)
+ScrollList.Size = UDim2.new(0, 300, 0, 200)
+ScrollList.Position = UDim2.new(0, 10, 0, 40)
 ScrollList.BackgroundTransparency = 1
-ScrollList.CanvasSize = UDim2.new(0, 0, 0, 0)
-ScrollList.ScrollBarThickness = 4
 ScrollList.Parent = MenuFrame
+local ListLayout = Instance.new("UIListLayout") ListLayout.Padding = UDim.new(0, 8) ListLayout.Parent = ScrollList
 
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Padding = UDim.new(0, 8)
-ListLayout.Parent = ScrollList
-
--- Кнопка закрытия меню X
 local CloseMenu = Instance.new("TextButton")
 CloseMenu.Size = UDim2.new(0, 30, 0, 30)
+CloseMenu.Position = UDim2.new(1, -35, 0, 5)
+CloseMenu.BackgroundTransparency = 1
+CloseMenu.Text = "✕"
+CloseMenu.TextColor3 = Color3.fromRGB(150, 150, 150)
+CloseMenu.TextSize = 18
+CloseMenu.Parent = MenuFrame
+CloseMenu.MouseButton1Click:Connect(function() MenuFrame.Visible = false end)
+
+local MoveButton = Instance.new("TextButton")
+MoveButton.Size = UDim2.new(0, 130, 0, 35)
+MoveButton.Position = UDim2.new(0, 10, 1, -50)
+MoveButton.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+MoveButton.Text = "MOVE TRIGGERS"
+MoveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MoveButton.Font = Enum.Font.SourceSansBold
+MoveButton.Parent = MenuFrame
+
+local AddButton = Instance.new("TextButton")
+AddButton.Size = UDim2.new(0, 130, 0, 35)
+AddButton.Position = UDim2.new(0, 160, 1, -50)
+AddButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+AddButton.Text = "+ Точка"
+AddButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AddButton.Font = Enum.Font.SourceSansBold
+AddButton.Parent = MenuFrame
+
+local SaveFrame = Instance.new("Frame")
+SaveFrame.Size = UDim2.new(0, 300, 0, 50)
+SaveFrame.Position = UDim2.new(0.5, -150, 1, -70)
+SaveFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+SaveFrame.Visible = false
+SaveFrame.Parent = ScreenGui
+
+local CancelBtn = Instance.new("TextButton")
+CancelBtn.Size = UDim2.new(0, 130, 0, 35)
+CancelBtn.Position = UDim2.new(0, 10, 0, 7)
+CancelBtn.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+CancelBtn.Text = "Назад"
+CancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CancelBtn.Parent = SaveFrame
+
+local SaveBtn = Instance.new("TextButton")
+SaveBtn.Size = UDim2.new(0, 130, 0, 35)
+SaveBtn.Position = UDim2.new(0, 160, 0, 7)
+SaveBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+SaveBtn.Text = "Готово"
+SaveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SaveBtn.Parent = SaveFrame
+
+local function clickAt(x, y)
+	local vu = game:GetService("VirtualUser")
+	vu:CaptureController()
+	vu:ClickButton1(Vector2.new(x, y)) -- Юзаем ClickButton1 вместо Down/Up, на мобилках работает стабильнее
+end
+
+local function startClicking(id)
+	local data = clickers[id]
+	if not data then return end
+	task.spawn(function()
+		while data.active and MainToggle.Text == "AC: ON" do
+			local trig = data.triggerFrame
+			if trig then
+				local x = trig.AbsolutePosition.X + (trig.AbsoluteSize.X / 2)
+				local y = trig.AbsolutePosition.Y + (trig.AbsoluteSize.Y / 2) + 36
+				clickAt(x, y)
+			end
+			task.wait(data.ms / 1000)
+		end
+	end)
+end
+
+local function createClickerElement(id, initialMs)
+	local ms = initialMs or 300
+	local Trigger = Instance.new("Frame")
+	Trigger.Size = UDim2.new(0, 30, 0, 30)
+	Trigger.Position = UDim2.new(0.4 + (id*0.02), 0, 0.4, 0)
+	Trigger.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+	Trigger.BackgroundTransparency = 0.3
+	Trigger.Visible = false
+	Trigger.Parent = ScreenGui
+	makeDraggable(Trigger)
+	
+	local ListRow = Instance.new("Frame")
+	ListRow.Size = UDim2.new(0, 285, 0, 45)
+	ListRow.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	ListRow.Parent = ScrollList
+	
+	local TextBox = Instance.new("TextBox")
+	TextBox.Size = UDim2.new(0, 60, 0, 25)
+	TextBox.Position = UDim2.new(0, 100, 0, 10)
+	TextBox.Text = tostring(ms)
+	TextBox.Parent = ListRow
+	
+	local DeleteBtn = Instance.new("TextButton")
+	DeleteBtn.Size = UDim2.new(0, 70, 0, 25)
+	DeleteBtn.Position = UDim2.new(1, -80, 0, 10)
+	DeleteBtn.BackgroundColor3 = Color3.fromRGB(192, 41, 43)
+	DeleteBtn.Text = "Удалить"
+	DeleteBtn.Parent = ListRow
+	
+	clickers[id] = { triggerFrame = Trigger, ms = ms, active = true, uiRow = ListRow }
+	
+	TextBox.FocusLost:Connect(function()
+		local num = tonumber(TextBox.Text)
+		if num and num >= 1 then clickers[id].ms = num else TextBox.Text = tostring(clickers[id].ms) end
+	end)
+	
+	DeleteBtn.MouseButton1Click:Connect(function()
+		clickers[id].active = false
+		Trigger:Destroy() ListRow:Destroy() clickers[id] = nil
+	end)
+end
+
+createClickerElement(1, 300)
+local nextId = 2
+AddButton.MouseButton1Click:Connect(function() createClickerElement(nextId, 300) nextId = nextId + 1 end)
+MenuButton.MouseButton1Click:Connect(function() MenuFrame.Visible = not MenuFrame.Visible end)
+
+MoveButton.MouseButton1Click:Connect(function()
+	MenuFrame.Visible = false SaveFrame.Visible = true editMode = true
+	for id, data in pairs(clickers) do data.triggerFrame.Visible = true end
+end)
+
+SaveBtn.MouseButton1Click:Connect(function()
+	SaveFrame.Visible = false MenuFrame.Visible = true editMode = false
+	for id, data in pairs(clickers) do data.triggerFrame.Visible = false end
+end)
+
+CancelBtn.MouseButton1Click:Connect(function()
+	SaveFrame.Visible = false MenuFrame.Visible = true editMode = false
+	for id, data in pairs(clickers) do data.triggerFrame.Visible = false end
+end)
+
+MainToggle.MouseButton1Click:Connect(function()
+	if editMode then return end
+	if MainToggle.Text == "AC: OFF" then
+		MainToggle.Text = "AC: ON"
+		MainToggle.BackgroundColor3 = Color3.fromRGB(75, 255, 75)
+		for id, data in pairs(clickers) do data.active = true startClicking(id) end
+	else
+		MainToggle.Text = "AC: OFF"
+		MainToggle.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
+		for id, data in pairs(clickers) do data.active = false end
+	end
+end)
 CloseMenu.Position = UDim2.new(1, -35, 0, 5)
 CloseMenu.BackgroundTransparency = 1
 CloseMenu.Text = "✕"
