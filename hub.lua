@@ -1,227 +1,278 @@
--- ==============================================================================
--- 🌟 LITEHUB V3 (MINIMAL EDITION)
--- ==============================================================================
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 
--- Удаляем старую версию хаба, если она уже открыта
-if CoreGui:FindFirstChild("LiteHub_V3") then 
-    CoreGui.LiteHub_V3:Destroy() 
-end
-
-local ScreenGui = Instance.new("ScreenGui", CoreGui)
-ScreenGui.Name = "LiteHub_V3"
-
--- Ссылки на твои скрипты
-local Scripts = {
-    ["Телепорт PRO"] = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/main.lua",
-    ["Fly Pack"] = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/fly.lua"
+-- ==========================================
+-- БАЗА ДАННЫХ ТВОИХ ЧИТОВ
+-- ==========================================
+local cheats = {
+    {name = "Teleport Manager", url = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/main.lua", targetGui = "TeleportGui"}, -- Замени "TeleportGui" на реальное имя GUI, если знаешь
+    {name = "FlyHack", url = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/fly.lua", targetGui = "FlyGui"},
+    {name = "Autoclicker", url = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/autoclick.lua", targetGui = "AdvancedAutoclicker"},
+    {name = "Auto Wallhop", url = "https://raw.githubusercontent.com/imablackmemw/litehub-roblox/refs/heads/main/wallhop.lua", targetGui = "WallhopCheat"}
 }
 
--- ==============================================================================
--- 🎨 ИНТЕРФЕЙС
--- ==============================================================================
+-- Создаем главную GUI
+local HubGui = Instance.new("ScreenGui")
+HubGui.Name = "LiteHub_Master"
+HubGui.Parent = CoreGui
+HubGui.ResetOnSpawn = false
 
--- Летающий кружок (когда хаб свернут)
-local OpenBtn = Instance.new("TextButton", ScreenGui)
-OpenBtn.Size = UDim2.new(0, 45, 0, 45)
-OpenBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
-OpenBtn.BackgroundColor3 = Color3.fromRGB(130, 50, 255)
-OpenBtn.Text = "Hub"
-OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-OpenBtn.Font = Enum.Font.GothamBold
-OpenBtn.TextSize = 14
-OpenBtn.Visible = false
-OpenBtn.Active = true
-OpenBtn.Draggable = true
-Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1, 0)
-
--- Главное меню
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 220, 0, 240)
-MainFrame.Position = UDim2.new(0.5, -110, 0.5, -120)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-MainFrame.Active = true
-MainFrame.Draggable = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-
--- Верхняя панель (Хедер)
-local Header = Instance.new("Frame", MainFrame)
-Header.Size = UDim2.new(1, 0, 0, 35)
-Header.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 10)
-local HeaderFix = Instance.new("Frame", Header)
-HeaderFix.Size = UDim2.new(1, 0, 0, 10)
-HeaderFix.Position = UDim2.new(0, 0, 1, -10)
-HeaderFix.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
-HeaderFix.BorderSizePixel = 0
-
-local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(0.7, 0, 1, 0)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Text = "LITEHUB V3"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-
--- Кнопка свернуть "_"
-local MinimizeBtn = Instance.new("TextButton", Header)
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 25)
-MinimizeBtn.Position = UDim2.new(1, -35, 0, 5)
-MinimizeBtn.Text = "_"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-MinimizeBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
-
--- Вкладки (Скрипты и Настройки)
-local TabContainer = Instance.new("Frame", MainFrame)
-TabContainer.Size = UDim2.new(1, 0, 1, -40)
-TabContainer.Position = UDim2.new(0, 0, 0, 40)
-TabContainer.BackgroundTransparency = 1
-
-local ScriptsTab = Instance.new("Frame", TabContainer)
-ScriptsTab.Size = UDim2.new(1, 0, 1, 0)
-ScriptsTab.BackgroundTransparency = 1
-
-local SettingsTab = Instance.new("Frame", TabContainer)
-SettingsTab.Size = UDim2.new(1, 0, 1, 0)
-SettingsTab.BackgroundTransparency = 1
-SettingsTab.Visible = false
-
-local ScriptsLayout = Instance.new("UIListLayout", ScriptsTab)
-ScriptsLayout.Padding = UDim.new(0, 8)
-ScriptsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Instance.new("Frame", ScriptsTab).Size = UDim2.new(1,0,0,2) -- Отступ сверху
-
-local SettingsLayout = Instance.new("UIListLayout", SettingsTab)
-SettingsLayout.Padding = UDim.new(0, 8)
-SettingsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Instance.new("Frame", SettingsTab).Size = UDim2.new(1,0,0,2) -- Отступ сверху
-
--- ==============================================================================
--- ⚙️ ФУНКЦИИ И КНОПКИ
--- ==============================================================================
-
-local function CreateButton(parent, text, color, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0.9, 0, 0, 35)
-    btn.Text = text
-    btn.BackgroundColor3 = color
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
-
--- Создаем кнопки для скриптов
-for name, url in pairs(Scripts) do
-    CreateButton(ScriptsTab, "🚀 Запустить: " .. name, Color3.fromRGB(45, 45, 55), function()
-        pcall(function()
-            loadstring(game:HttpGet(url))()
-        end)
+-- ==========================================
+-- ФУНКЦИЯ ПЕРЕТАСКИВАНИЯ (DRAG)
+-- ==========================================
+local function makeDraggable(obj)
+    local dragging, dragInput, dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true dragStart = input.Position startPos = obj.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    obj.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
     end)
 end
 
--- Кнопка перехода в настройки
-CreateButton(ScriptsTab, "⚙️ Настройки", Color3.fromRGB(70, 50, 120), function()
-    ScriptsTab.Visible = false
-    SettingsTab.Visible = true
+-- ==========================================
+-- СВОРАЧИВАЕМЫЙ КРУЖОК (МИНИ-ХАБ)
+-- ==========================================
+local MiniCircle = Instance.new("ImageButton")
+MiniCircle.Size = UDim2.new(0, 50, 0, 50)
+MiniCircle.Position = UDim2.new(0.05, 0, 0.1, 0)
+MiniCircle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MiniCircle.Image = "rbxassetid://10867478505" -- Иконка хакера/кода (можно поменять)
+MiniCircle.Visible = false
+MiniCircle.Parent = HubGui
+makeDraggable(MiniCircle)
+
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0) -- Делает идеальный круг
+CircleCorner.Parent = MiniCircle
+
+local CircleStroke = Instance.new("UIStroke")
+CircleStroke.Color = Color3.fromRGB(0, 255, 128)
+CircleStroke.Thickness = 2
+CircleStroke.Parent = MiniCircle
+
+-- ==========================================
+-- ГЛАВНОЕ ОКНО ХАБА
+-- ==========================================
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 400, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Visible = false
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = HubGui
+makeDraggable(MainFrame)
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+-- Шапка хаба
+local Topbar = Instance.new("Frame")
+Topbar.Size = UDim2.new(1, 0, 0, 40)
+Topbar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Topbar.Parent = MainFrame
+local TopbarCorner = Instance.new("UICorner") TopbarCorner.CornerRadius = UDim.new(0, 10) TopbarCorner.Parent = Topbar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ LITE HUB | Panel"
+Title.TextColor3 = Color3.fromRGB(0, 255, 128)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Topbar
+
+-- Кнопка "Свернуть" (-)
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 40, 0, 40)
+MinimizeBtn.Position = UDim2.new(1, -80, 0, 0)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "–"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 24
+MinimizeBtn.Parent = Topbar
+
+-- Кнопка "Убить Хаб" (X)
+local CloseHubBtn = Instance.new("TextButton")
+CloseHubBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseHubBtn.Position = UDim2.new(1, -40, 0, 0)
+CloseHubBtn.BackgroundTransparency = 1
+CloseHubBtn.Text = "✕"
+CloseHubBtn.TextColor3 = Color3.fromRGB(255, 75, 75)
+CloseHubBtn.Font = Enum.Font.GothamBold
+CloseHubBtn.TextSize = 20
+CloseHubBtn.Parent = Topbar
+
+-- Скролл-список для читов
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, -20, 1, -50)
+Scroll.Position = UDim2.new(0, 10, 0, 45)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 4
+Scroll.Parent = MainFrame
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 8)
+Layout.Parent = Scroll
+
+-- ==========================================
+-- ЛОГИКА ГЕНЕРАЦИИ СПИСКА ЧИТОВ
+-- ==========================================
+for i, cheat in pairs(cheats) do
+    local Item = Instance.new("Frame")
+    Item.Size = UDim2.new(1, -10, 0, 45)
+    Item.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Item.Parent = Scroll
+    local ItemCorner = Instance.new("UICorner") ItemCorner.CornerRadius = UDim.new(0, 6) ItemCorner.Parent = Item
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0, 150, 1, 0)
+    Label.Position = UDim2.new(0, 15, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = cheat.name
+    Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Item
+
+    -- Кнопка Запуска
+    local LoadBtn = Instance.new("TextButton")
+    LoadBtn.Size = UDim2.new(0, 80, 0, 30)
+    LoadBtn.Position = UDim2.new(1, -130, 0, 7)
+    LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    LoadBtn.Text = "Load"
+    LoadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LoadBtn.Font = Enum.Font.GothamBold
+    LoadBtn.Parent = Item
+    local LCorner = Instance.new("UICorner") LCorner.CornerRadius = UDim.new(0, 6) LCorner.Parent = LoadBtn
+
+    -- Кнопка Убийства (X)
+    local KillBtn = Instance.new("TextButton")
+    KillBtn.Size = UDim2.new(0, 30, 0, 30)
+    KillBtn.Position = UDim2.new(1, -40, 0, 7)
+    KillBtn.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
+    KillBtn.Text = "✕"
+    KillBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KillBtn.Font = Enum.Font.GothamBold
+    KillBtn.Parent = Item
+    local KCorner = Instance.new("UICorner") KCorner.CornerRadius = UDim.new(0, 6) KCorner.Parent = KillBtn
+
+    -- Действие при нажатии "Load"
+    LoadBtn.MouseButton1Click:Connect(function()
+        LoadBtn.Text = "..."
+        LoadBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+        task.spawn(function()
+            -- Загружаем скрипт по ссылке
+            local success, err = pcall(function()
+                loadstring(game:HttpGet(cheat.url))()
+            end)
+            task.wait(0.5)
+            if success then
+                LoadBtn.Text = "Loaded!"
+                LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+            else
+                LoadBtn.Text = "Error"
+                LoadBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                print("LITEHUB ERROR:", err)
+            end
+            task.wait(2)
+            LoadBtn.Text = "Load"
+            LoadBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        end)
+    end)
+
+    -- Действие при нажатии "Убить" (X)
+    KillBtn.MouseButton1Click:Connect(function()
+        -- Ищем интерфейс чита в CoreGui и уничтожаем его
+        local target = CoreGui:FindFirstChild(cheat.targetGui)
+        if target then
+            target:Destroy()
+        end
+        
+        -- Экстренный сброс (Полезно для Fly, чтобы персонаж упал на землю)
+        local char = Players.LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            for _, v in pairs(char.HumanoidRootPart:GetChildren()) do
+                if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then v:Destroy() end
+            end
+        end
+    end)
+end
+
+-- Авто-подгонка скролла
+Scroll.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10)
+
+-- ==========================================
+-- ЭКРАН ЗАГРУЗКИ (LOADING SCREEN)
+-- ==========================================
+local LoadingFrame = Instance.new("Frame")
+LoadingFrame.Size = UDim2.new(0, 400, 0, 300)
+LoadingFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+LoadingFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+LoadingFrame.Parent = HubGui
+
+local LoadCorner = Instance.new("UICorner")
+LoadCorner.CornerRadius = UDim.new(0, 10)
+LoadCorner.Parent = LoadingFrame
+
+local LoadText = Instance.new("TextLabel")
+LoadText.Size = UDim2.new(1, 0, 1, 0)
+LoadText.BackgroundTransparency = 1
+LoadText.Text = "Injecting LiteHub..."
+LoadText.TextColor3 = Color3.fromRGB(0, 255, 128)
+LoadText.Font = Enum.Font.GothamBold
+LoadText.TextSize = 22
+LoadText.Parent = LoadingFrame
+
+-- Анимация загрузки
+task.spawn(function()
+    task.wait(0.5)
+    LoadText.Text = "Loading Scripts..."
+    task.wait(0.5)
+    LoadText.Text = "Bypassing..."
+    task.wait(0.6)
+    
+    -- Плавное исчезновение загрузки
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    TweenService:Create(LoadingFrame, tweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(LoadText, tweenInfo, {TextTransparency = 1}):Play()
+    
+    task.wait(0.5)
+    LoadingFrame:Destroy()
+    MainFrame.Visible = true -- Показываем главный хаб
 end)
 
--- Кнопки в настройках
-CreateButton(SettingsTab, "◀️ Назад", Color3.fromRGB(45, 45, 55), function()
-    SettingsTab.Visible = false
-    ScriptsTab.Visible = true
-end)
-
-CreateButton(SettingsTab, "❌ Закрыть Хаб", Color3.fromRGB(180, 50, 50), function()
-    ScreenGui:Destroy()
-end)
-
--- Логика сворачивания
+-- ==========================================
+-- ЛОГИКА СВОРАЧИВАНИЯ / ЗАКРЫТИЯ ХАБА
+-- ==========================================
 MinimizeBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
-    OpenBtn.Visible = true
+    MiniCircle.Visible = true
 end)
 
-OpenBtn.MouseButton1Click:Connect(function()
-    OpenBtn.Visible = false
+MiniCircle.MouseButton1Click:Connect(function()
+    MiniCircle.Visible = false
     MainFrame.Visible = true
 end)
 
-print("LiteHub V3 Загружен! Успешной игры!")
-
--- Функция создания кнопки
-local function createButton(name, url, yPos)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Text = name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    btn.BorderSizePixel = 0
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.Position = UDim2.new(0, 0, 0, yPos)
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
-
-    -- Событие нажатия
-    btn.MouseButton1Click:Connect(function()
-        -- Проверка дубликата
-        if loadedURLs[url] then
-            print("Скрипт уже запущен: " .. name)
-            return
-        end
-        -- Загрузка и выполнение скрипта
-        local success, err = pcall(function()
-            loadstring(game:HttpGet(url))()
-        end)
-        if success then
-            loadedURLs[url] = true
-            print("Скрипт загружен: " .. name)
-        else
-            warn("Ошибка загрузки " .. name .. ": " .. tostring(err))
-        end
-    end)
-
-    return btn
-end
-
--- Размещаем кнопки внутри BtnFrame
-for i, btnData in ipairs(buttons) do
-    local btn = createButton(btnData.Name, btnData.URL, (i-1)*40)
-    btn.Parent = BtnFrame
-end
-
--- Логика показа/скрытия меню
-local function hideMain()
-    MainFrame.Visible = false
-end
-
-local function showMain()
-    MainFrame.Visible = true
-end
-
-CloseBtn.MouseButton1Click:Connect(hideMain)
-ToggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if MainFrame.Visible then
-            hideMain()
-        else
-            showMain()
-        end
-    end
+CloseHubBtn.MouseButton1Click:Connect(function()
+    HubGui:Destroy() -- Полностью убивает хаб
 end)
-
--- Чтобы кнопка-триггер не перекрывала меню при перетаскивании
-ToggleBtn.DragStopped:Connect(function()
-    -- Ничего, оставляем позицию
-end)
-
-print("LiteHub загружен! Кнопка-триггер в правом верхнем углу.")
