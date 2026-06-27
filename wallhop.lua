@@ -1,75 +1,39 @@
-local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
 local LocalPlayer = Players.LocalPlayer
-
-local ScreenGui = Instance.new("ScreenGui")
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "WallhopCheat"
-ScreenGui.Parent = game:CoreGui
 
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Parent = ScreenGui
-ToggleButton.Size = UDim2.new(0, 80, 0, 40)
-ToggleButton.Position = UDim2.new(0.1, 0, 0.5, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 75, 75)
-ToggleButton.Text = "OFF"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.TextSize = 18
-ToggleButton.Active = true
+local btn = Instance.new("TextButton", ScreenGui)
+btn.Size = UDim2.new(0, 100, 0, 50)
+btn.Position = UDim2.new(0.1, 0, 0.4, 0)
+btn.Text = "Wallhop: OFF"
+btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+btn.Draggable = true
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = ToggleButton
-
-local wallhopEnabled = false
-local isJumping = false
-
--- Упрощенный Drag без лишних ивентов
-local dragging, dragInput, dragStart, startPos
-ToggleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = ToggleButton.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-    end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+local enabled = false
+btn.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    btn.Text = enabled and "Wallhop: ON" or "Wallhop: OFF"
+    btn.BackgroundColor3 = enabled and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(200, 50, 50)
 end)
 
-ToggleButton.MouseButton1Click:Connect(function()
-    wallhopEnabled = not wallhopEnabled
-    ToggleButton.BackgroundColor3 = wallhopEnabled and Color3.fromRGB(75, 255, 75) or Color3.fromRGB(255, 75, 75)
-    ToggleButton.Text = wallhopEnabled and "ON" or "OFF"
-end)
-
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.Space then isJumping = true end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.Space then isJumping = false end
-end)
-
--- Безопасный цикл вместо Stepped, чтобы Codex не ругался
-task.spawn(function()
-    while true do
-        task.wait(0.03) -- 30 раз в секунду вполне хватает для воллхопа на мобилках
-        if wallhopEnabled and isJumping then
-            local character = LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            
-            if humanoid and rootPart then
-                local raycastParams = RaycastParams.new()
-                raycastParams.FilterDescendantsInstances = {character}
-                raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+RunService.RenderStepped:Connect(function()
+    if enabled then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+            local hrp = char.HumanoidRootPart
+            -- Проверка: если мы зажали пробел и перед нами есть объект
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                local ray = Ray.new(hrp.Position, hrp.CFrame.LookVector * 3)
+                local hit, pos = workspace:FindPartOnRay(ray, char)
                 
-                local raycastResult = game:Workspace:Raycast(rootPart.Position, rootPart.CFrame.LookVector * 2.5, raycastParams)
-                if raycastResult then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                if hit then
+                    char.Humanoid.JumpPower = 50 -- Стандартный прыжок
+                    char.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 end
             end
         end
